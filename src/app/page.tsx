@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 
-// ─── 类型定义 ─────────────────────────────────────────────────────────────────
+// ─── Type Definitions ─────────────────────────────────────────────────────────
 
 type UserRole = 'hq_admin' | 'inspector' | 'store_manager'
 
@@ -59,13 +59,13 @@ type AuditLog = {
   operator: { id: number; email: string; role: string }
 }
 
-// ─── 常量 ──────────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
-  PENDING_INSPECTION: '待巡检',
-  PENDING_RECTIFICATION: '待整改',
-  PENDING_REVIEW: '待复核',
-  CLOSED: '已关闭',
+  PENDING_INSPECTION: 'Pending Inspection',
+  PENDING_RECTIFICATION: 'Pending Rectification',
+  PENDING_REVIEW: 'Pending Review',
+  CLOSED: 'Closed',
 }
 
 const STATUS_COLOR: Record<TaskStatus, string> = {
@@ -76,24 +76,24 @@ const STATUS_COLOR: Record<TaskStatus, string> = {
 }
 
 const ROLE_LABEL: Record<UserRole, string> = {
-  hq_admin: '总部管理员',
-  inspector: '巡检员',
-  store_manager: '门店负责人',
+  hq_admin: 'HQ Admin',
+  inspector: 'Inspector',
+  store_manager: 'Store Manager',
 }
 
 type Tab = 'dashboard' | 'tasks' | 'audit'
 
-// ─── 工具函数 ─────────────────────────────────────────────────────────────────
+// ─── Utility Functions ────────────────────────────────────────────────────────
 
 function fmt(date: string) {
-  return new Date(date).toLocaleDateString('zh-CN')
+  return new Date(date).toLocaleDateString('en-US')
 }
 
 function fmtDatetime(date: string) {
-  return new Date(date).toLocaleString('zh-CN')
+  return new Date(date).toLocaleString('en-US')
 }
 
-// ─── 主组件 ───────────────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Home() {
   const [token, setToken] = useState('')
@@ -102,33 +102,33 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // 主视图
+  // main view
   const [tab, setTab] = useState<Tab>('dashboard')
 
-  // 任务列表
+  // task list
   const [tasks, setTasks] = useState<Task[]>([])
   const [filterStatus, setFilterStatus] = useState('')
   const [filterOverdue, setFilterOverdue] = useState(false)
 
-  // 看板
+  // dashboard
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
 
-  // 审计日志
+  // audit logs
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [auditTotal, setAuditTotal] = useState(0)
   const [auditPage, setAuditPage] = useState(1)
 
-  // 创建任务弹窗
+  // create task modal
   const [showCreateTask, setShowCreateTask] = useState(false)
 
-  // 整改详情弹窗
+  // rectification detail modal
   const [rectTaskId, setRectTaskId] = useState<number | null>(null)
   const [submissions, setSubmissions] = useState<RectificationSubmission[]>([])
-  const [rectNote, setRectNote] = useState('已完成整改，请复核')
+  const [rectNote, setRectNote] = useState('Rectification completed, please review')
   const [rectFile, setRectFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
 
-  // 图片预览
+  // image preview
   const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   const isAuthed = Boolean(token && user)
@@ -145,19 +145,19 @@ export default function Home() {
         body: JSON.stringify({ email, password }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || '登录失败')
+      if (!res.ok) throw new Error(data?.error || 'Login failed')
       setToken(data.accessToken)
       setRefreshToken(data.refreshToken)
       setUser(data.user)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '登录失败')
+      setError(e instanceof Error ? e.message : 'Login failed')
     } finally {
       setLoading(false)
     }
   }
 
   async function logout() {
-    // 通知服务端删除 refresh token
+    // notify server to delete refresh token
     if (refreshToken) {
       await fetch('/api/auth/logout', {
         method: 'POST',
@@ -175,7 +175,7 @@ export default function Home() {
     setTab('dashboard')
   }
 
-  // access token 过期时，用 refresh token 自动换新 token
+  // when access token expires, use refresh token to get a new one automatically
   async function refreshAccessToken(): Promise<string | null> {
     if (!refreshToken) return null
     try {
@@ -185,7 +185,7 @@ export default function Home() {
         body: JSON.stringify({ refreshToken }),
       })
       if (!res.ok) {
-        // refresh token 也失效了，强制登出
+        // refresh token also expired, force logout
         logout()
         return null
       }
@@ -197,7 +197,7 @@ export default function Home() {
     }
   }
 
-  // 带自动续签的 fetch 封装
+  // fetch wrapper with automatic token refresh
   async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
     let currentToken = token
     const makeReq = (t: string) => fetch(url, {
@@ -207,7 +207,7 @@ export default function Home() {
 
     let res = await makeReq(currentToken)
 
-    // access token 过期时自动换新 token 重试一次
+    // retry once with new token if access token expired
     if (res.status === 401) {
       const newToken = await refreshAccessToken()
       if (newToken) {
@@ -217,7 +217,7 @@ export default function Home() {
     return res
   }
 
-  // ─── 数据加载 ─────────────────────────────────────────────────────────────────
+  // ─── Data Loading ─────────────────────────────────────────────────────────────
 
   const loadTasks = useCallback(async () => {
     setError('')
@@ -228,10 +228,10 @@ export default function Home() {
       if (filterOverdue) params.set('overdue', 'true')
       const res = await authFetch(`/api/tasks?${params}`)
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || '加载任务失败')
+      if (!res.ok) throw new Error(data?.error || 'Failed to load tasks')
       setTasks(data.tasks || [])
     } catch (e) {
-      setError(e instanceof Error ? e.message : '加载任务失败')
+      setError(e instanceof Error ? e.message : 'Failed to load tasks')
     } finally {
       setLoading(false)
     }
@@ -243,7 +243,7 @@ export default function Home() {
       const data = await res.json()
       if (res.ok) setMetrics(data.summary)
     } catch {
-      // 静默失败
+      // silent fail
     }
   }, [token, refreshToken])
 
@@ -253,18 +253,18 @@ export default function Home() {
     try {
       const res = await authFetch(`/api/audit-logs?page=${page}&pageSize=15`)
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || '加载审计日志失败')
+      if (!res.ok) throw new Error(data?.error || 'Failed to load audit logs')
       setAuditLogs(data.data || [])
       setAuditTotal(data.total || 0)
       setAuditPage(page)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '加载审计日志失败')
+      setError(e instanceof Error ? e.message : 'Failed to load audit logs')
     } finally {
       setLoading(false)
     }
   }, [token, refreshToken])
 
-  // 登录后自动加载
+  // auto-load after login
   useEffect(() => {
     if (!isAuthed) return
     loadMetrics()
@@ -280,7 +280,7 @@ export default function Home() {
     loadAuditLogs(1)
   }, [isAuthed, tab, loadAuditLogs])
 
-  // ─── 状态流转 ─────────────────────────────────────────────────────────────────
+  // ─── Status Transitions ───────────────────────────────────────────────────────
 
   async function changeStatus(taskId: number, status: TaskStatus) {
     setError('')
@@ -292,30 +292,30 @@ export default function Home() {
         body: JSON.stringify({ status }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || '状态更新失败')
+      if (!res.ok) throw new Error(data?.error || 'Status update failed')
       await loadTasks()
       await loadMetrics()
     } catch (e) {
-      setError(e instanceof Error ? e.message : '状态更新失败')
+      setError(e instanceof Error ? e.message : 'Status update failed')
     } finally {
       setLoading(false)
     }
   }
 
-  // ─── 整改提交 ─────────────────────────────────────────────────────────────────
+  // ─── Rectification Submission ─────────────────────────────────────────────────
 
   async function openRectification(taskId: number) {
     setRectTaskId(taskId)
-    setRectNote('已完成整改，请复核')
+    setRectNote('Rectification completed, please review')
     setRectFile(null)
     setSubmissions([])
-    // 加载已有整改记录
+    // load existing rectification records
     try {
       const res = await authFetch(`/api/tasks/${taskId}/rectifications`)
       const data = await res.json()
       if (res.ok) setSubmissions(data.submissions || [])
     } catch {
-      // 静默
+      // silent
     }
   }
 
@@ -326,7 +326,7 @@ export default function Home() {
     try {
       const s3Keys: string[] = []
 
-      // 如果有文件，先上传到 S3
+      // if file present, upload to S3 first
       if (rectFile) {
         const presignRes = await authFetch('/api/files/presign-upload', {
           method: 'POST',
@@ -340,9 +340,9 @@ export default function Home() {
         })
         const presignData = await presignRes.json()
         console.log('[presign-upload] status:', presignRes.status, 'body:', presignData)
-        if (!presignRes.ok) throw new Error(presignData?.error || '获取上传链接失败')
+        if (!presignRes.ok) throw new Error(presignData?.error || 'Failed to get upload URL')
 
-        // PUT 到 S3
+        // PUT to S3
         console.log('[s3 upload] PUT to:', presignData.uploadUrl?.slice(0, 80) + '...', 'file size:', rectFile.size)
         const uploadRes = await fetch(presignData.uploadUrl, {
           method: 'PUT',
@@ -350,30 +350,30 @@ export default function Home() {
           headers: { 'Content-Type': rectFile.type || 'application/octet-stream' },
         })
         console.log('[s3 upload] response status:', uploadRes.status, uploadRes.statusText)
-        if (!uploadRes.ok) throw new Error('文件上传到 S3 失败')
+        if (!uploadRes.ok) throw new Error('File upload to S3 failed')
         s3Keys.push(presignData.s3Key)
       }
 
-      // 提交整改
+      // submit rectification
       const res = await authFetch(`/api/tasks/${rectTaskId}/rectifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ note: rectNote, s3Keys }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error || '提交整改失败')
+      if (!res.ok) throw new Error(data?.error || 'Failed to submit rectification')
 
       setRectTaskId(null)
       await loadTasks()
       await loadMetrics()
     } catch (e) {
-      setError(e instanceof Error ? e.message : '提交整改失败')
+      setError(e instanceof Error ? e.message : 'Failed to submit rectification')
     } finally {
       setUploading(false)
     }
   }
 
-  // ─── 渲染 ─────────────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────────
 
   if (!isAuthed) {
     return <LoginPage onLogin={login} loading={loading} error={error} />
@@ -381,12 +381,12 @@ export default function Home() {
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', minHeight: '100vh', background: '#f5f6fa' }}>
-      {/* 顶部导航 */}
+      {/* top navigation */}
       <header style={{ background: '#fff', borderBottom: '1px solid #e8e8e8', padding: '0 24px', display: 'flex', alignItems: 'center', gap: 0, height: 56 }}>
-        <span style={{ fontWeight: 700, fontSize: 18, color: '#1677ff', marginRight: 32 }}>🔍 巡检平台</span>
+        <span style={{ fontWeight: 700, fontSize: 18, color: '#1677ff', marginRight: 32 }}>🔍 Inspection Platform</span>
         <nav style={{ display: 'flex', gap: 0, flex: 1 }}>
           {(['dashboard', 'tasks', ...(user?.role === 'hq_admin' ? ['audit'] : [])] as Tab[]).map((t) => {
-            const labels: Record<Tab, string> = { dashboard: '运营看板', tasks: '任务管理', audit: '审计日志' }
+            const labels: Record<Tab, string> = { dashboard: 'Dashboard', tasks: 'Tasks', audit: 'Audit Logs' }
             return (
               <button
                 key={t}
@@ -407,7 +407,7 @@ export default function Home() {
           <span style={{ fontSize: 13, color: '#595959' }}>
             <strong>{user?.name}</strong>（{ROLE_LABEL[user!.role]}）
           </span>
-          <button onClick={logout} style={outlineBtnStyle}>退出</button>
+          <button onClick={logout} style={outlineBtnStyle}>Logout</button>
         </div>
       </header>
 
@@ -450,7 +450,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* 创建任务弹窗 */}
+      {/* create task modal */}
       {showCreateTask && (
         <CreateTaskModal
           token={token}
@@ -463,7 +463,7 @@ export default function Home() {
         />
       )}
 
-      {/* 整改提交弹窗 */}
+      {/* rectification modal */}
       {rectTaskId !== null && (
         <RectificationModal
           taskId={rectTaskId}
@@ -481,7 +481,7 @@ export default function Home() {
         />
       )}
 
-      {/* 图片预览 */}
+      {/* image preview */}
       {previewImage && (
         <div
           onClick={() => setPreviewImage(null)}
@@ -499,7 +499,7 @@ export default function Home() {
         >
           <img
             src={previewImage}
-            alt="预览"
+            alt="Preview"
             style={{ maxWidth: '90%', maxHeight: '90%', borderRadius: 8, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
             onClick={(e) => e.stopPropagation()}
           />
@@ -518,7 +518,7 @@ export default function Home() {
               fontWeight: 500,
             }}
           >
-            关闭
+            Close
           </button>
         </div>
       )}
@@ -526,7 +526,7 @@ export default function Home() {
   )
 }
 
-// ─── 登录页 ───────────────────────────────────────────────────────────────────
+// ─── Login Page ───────────────────────────────────────────────────────────────
 
 function LoginPage({ onLogin, loading, error }: {
   onLogin: (email: string, password: string) => void; loading: boolean; error: string
@@ -536,8 +536,8 @@ function LoginPage({ onLogin, loading, error }: {
   return (
     <div style={{ minHeight: '100vh', background: '#f5f6fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: '#fff', borderRadius: 12, padding: 40, width: 380, boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
-        <h1 style={{ marginTop: 0, marginBottom: 4, fontSize: 22 }}>🔍 门店巡检平台</h1>
-        <p style={{ color: '#8c8c8c', marginBottom: 28, marginTop: 0 }}>请登录以继续</p>
+        <h1 style={{ marginTop: 0, marginBottom: 4, fontSize: 22 }}>🔍 Store Inspection Platform</h1>
+        <p style={{ color: '#8c8c8c', marginBottom: 28, marginTop: 0 }}>Please log in to continue</p>
         {error && (
           <div style={{ marginBottom: 16, color: '#cf1322', background: '#fff1f0', border: '1px solid #ffa39e', padding: '8px 12px', borderRadius: 6, fontSize: 14 }}>
             {error}
@@ -545,56 +545,56 @@ function LoginPage({ onLogin, loading, error }: {
         )}
         <div style={{ display: 'grid', gap: 14 }}>
           <div>
-            <div style={labelStyle}>邮箱</div>
+            <div style={labelStyle}>Email</div>
             <input style={inputStyle} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" />
           </div>
           <div>
-            <div style={labelStyle}>密码</div>
+            <div style={labelStyle}>Password</div>
             <input style={inputStyle} type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && onLogin(email, password)} />
           </div>
           <button onClick={() => onLogin(email, password)} disabled={loading} style={{ ...primaryBtnStyle, width: '100%', padding: '10px 0', marginTop: 4 }}>
-            {loading ? '登录中...' : '登录'}
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </div>
         <div style={{ marginTop: 20, fontSize: 13, color: '#8c8c8c', lineHeight: 1.8 }}>
-          <div>测试账号（密码统一 password123）：</div>
-          <div>admin@test.com — 总部管理员</div>
-          <div>inspector@test.com — 巡检员</div>
-          <div>manager@test.com — 门店负责人</div>
+          <div>Test accounts (password: password123):</div>
+          <div>admin@test.com — HQ Admin</div>
+          <div>inspector@test.com — Inspector</div>
+          <div>manager@test.com — Store Manager</div>
         </div>
       </div>
     </div>
   )
 }
 
-// ─── 看板 Tab ──────────────────────────────────────────────────────────────────
+// ─── Dashboard Tab ─────────────────────────────────────────────────────────────
 
 function DashboardTab({ metrics, onRefresh }: { metrics: DashboardMetrics | null; onRefresh: () => void }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0 }}>运营看板</h2>
-        <button onClick={onRefresh} style={outlineBtnStyle}>刷新</button>
+        <h2 style={{ margin: 0 }}>Operations Dashboard</h2>
+        <button onClick={onRefresh} style={outlineBtnStyle}>Refresh</button>
       </div>
       {!metrics ? (
-        <div style={cardStyle}>加载中...</div>
+        <div style={cardStyle}>Loading...</div>
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
-            <MetricCard label="任务总数" value={metrics.totalTasks} color="#1677ff" />
-            <MetricCard label="已关闭" value={metrics.closedTasks} color="#52c41a" />
-            <MetricCard label="完成率" value={`${metrics.completionRate}%`} color="#13c2c2" />
-            <MetricCard label="逾期任务" value={metrics.overdueTasks} color="#cf1322" />
-            <MetricCard label="逾期率" value={`${metrics.overdueRate}%`} color="#fa541c" />
-            <MetricCard label="待整改" value={metrics.pendingRectification} color="#fa8c16" />
-            <MetricCard label="待复核" value={metrics.pendingReview} color="#722ed1" />
+            <MetricCard label="Total Tasks" value={metrics.totalTasks} color="#1677ff" />
+            <MetricCard label="Closed" value={metrics.closedTasks} color="#52c41a" />
+            <MetricCard label="Completion Rate" value={`${metrics.completionRate}%`} color="#13c2c2" />
+            <MetricCard label="Overdue Tasks" value={metrics.overdueTasks} color="#cf1322" />
+            <MetricCard label="Overdue Rate" value={`${metrics.overdueRate}%`} color="#fa541c" />
+            <MetricCard label="Pending Rectification" value={metrics.pendingRectification} color="#fa8c16" />
+            <MetricCard label="Pending Review" value={metrics.pendingReview} color="#722ed1" />
           </div>
 
-          {/* 进度条 */}
+          {/* progress bars */}
           <div style={cardStyle}>
-            <h3 style={{ marginTop: 0, marginBottom: 16 }}>任务完成进度</h3>
-            <ProgressBar label="已完成" value={metrics.completionRate} color="#52c41a" />
-            <ProgressBar label="逾期率" value={metrics.overdueRate} color="#cf1322" />
+            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Task Completion Progress</h3>
+            <ProgressBar label="Completed" value={metrics.completionRate} color="#52c41a" />
+            <ProgressBar label="Overdue Rate" value={metrics.overdueRate} color="#cf1322" />
           </div>
         </>
       )}
@@ -624,7 +624,7 @@ function ProgressBar({ label, value, color }: { label: string; value: number; co
   )
 }
 
-// ─── 任务 Tab ─────────────────────────────────────────────────────────────────
+// ─── Tasks Tab ────────────────────────────────────────────────────────────────
 
 function TasksTab({ tasks, user, loading, filterStatus, filterOverdue, onFilterStatus, onFilterOverdue, onRefresh, onShowCreate, onChangeStatus, onOpenRectification }: {
   tasks: Task[]; user: User; loading: boolean
@@ -637,27 +637,27 @@ function TasksTab({ tasks, user, loading, filterStatus, filterOverdue, onFilterS
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-        <h2 style={{ margin: 0 }}>任务管理（{tasks.length}）</h2>
+        <h2 style={{ margin: 0 }}>Task Management ({tasks.length})</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* 过滤器 */}
+          {/* filters */}
           <select
             value={filterStatus}
             onChange={(e) => onFilterStatus(e.target.value)}
             style={selectStyle}
           >
-            <option value="">全部状态</option>
-            <option value="PENDING_INSPECTION">待巡检</option>
-            <option value="PENDING_RECTIFICATION">待整改</option>
-            <option value="PENDING_REVIEW">待复核</option>
-            <option value="CLOSED">已关闭</option>
+            <option value="">All Statuses</option>
+            <option value="PENDING_INSPECTION">Pending Inspection</option>
+            <option value="PENDING_RECTIFICATION">Pending Rectification</option>
+            <option value="PENDING_REVIEW">Pending Review</option>
+            <option value="CLOSED">Closed</option>
           </select>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer' }}>
             <input type="checkbox" checked={filterOverdue} onChange={(e) => onFilterOverdue(e.target.checked)} />
-            仅看逾期
+            Overdue only
           </label>
-          <button onClick={onRefresh} disabled={loading} style={outlineBtnStyle}>刷新</button>
+          <button onClick={onRefresh} disabled={loading} style={outlineBtnStyle}>Refresh</button>
           {(user.role === 'hq_admin' || user.role === 'inspector') && (
-            <button onClick={onShowCreate} style={primaryBtnStyle}>+ 创建任务</button>
+            <button onClick={onShowCreate} style={primaryBtnStyle}>+ Create Task</button>
           )}
         </div>
       </div>
@@ -667,14 +667,14 @@ function TasksTab({ tasks, user, loading, filterStatus, filterOverdue, onFilterS
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['ID', '标题', '门店', '负责人', '截止日期', '状态', '检查项', '操作'].map((h) => (
+                {['ID', 'Title', 'Store', 'Assignee', 'Due Date', 'Status', 'Items', 'Actions'].map((h) => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {tasks.length === 0 && (
-                <tr><td colSpan={8} style={{ ...tdStyle, textAlign: 'center', color: '#8c8c8c', padding: 32 }}>暂无任务</td></tr>
+                <tr><td colSpan={8} style={{ ...tdStyle, textAlign: 'center', color: '#8c8c8c', padding: 32 }}>No tasks found</td></tr>
               )}
               {tasks.map((task) => (
                 <tr key={task.id} style={{ background: task.isOverdue && task.status !== 'CLOSED' ? '#fff7e6' : undefined }}>
@@ -683,7 +683,7 @@ function TasksTab({ tasks, user, loading, filterStatus, filterOverdue, onFilterS
                     <div style={{ fontWeight: 500 }}>{task.title}</div>
                     {task.description && <div style={{ color: '#8c8c8c', fontSize: 12, marginTop: 2 }}>{task.description}</div>}
                     {task.isOverdue && task.status !== 'CLOSED' && (
-                      <span style={{ fontSize: 11, color: '#cf1322', background: '#fff1f0', padding: '1px 6px', borderRadius: 3, marginTop: 4, display: 'inline-block' }}>逾期</span>
+                      <span style={{ fontSize: 11, color: '#cf1322', background: '#fff1f0', padding: '1px 6px', borderRadius: 3, marginTop: 4, display: 'inline-block' }}>Overdue</span>
                     )}
                   </td>
                   <td style={tdStyle}>
@@ -701,20 +701,20 @@ function TasksTab({ tasks, user, loading, filterStatus, filterOverdue, onFilterS
                   <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {task.status === 'PENDING_INSPECTION' && (user.role === 'hq_admin' || user.role === 'inspector') && (
-                        <button onClick={() => onChangeStatus(task.id, 'PENDING_RECTIFICATION')} disabled={loading} style={smallBtnStyle}>提交巡检</button>
+                        <button onClick={() => onChangeStatus(task.id, 'PENDING_RECTIFICATION')} disabled={loading} style={smallBtnStyle}>Submit Inspection</button>
                       )}
                       {task.status === 'PENDING_RECTIFICATION' && user.role === 'store_manager' && (
-                        <button onClick={() => onOpenRectification(task.id)} disabled={loading} style={{ ...smallBtnStyle, background: '#fa8c16' }}>提交整改</button>
+                        <button onClick={() => onOpenRectification(task.id)} disabled={loading} style={{ ...smallBtnStyle, background: '#fa8c16' }}>Submit Rectification</button>
                       )}
                       {task.status === 'PENDING_REVIEW' && (user.role === 'hq_admin' || user.role === 'inspector') && (
                         <>
-                          <button onClick={() => onChangeStatus(task.id, 'CLOSED')} disabled={loading} style={{ ...smallBtnStyle, background: '#52c41a' }}>通过</button>
-                          <button onClick={() => onChangeStatus(task.id, 'PENDING_RECTIFICATION')} disabled={loading} style={{ ...smallBtnStyle, background: '#ff4d4f' }}>打回</button>
+                          <button onClick={() => onChangeStatus(task.id, 'CLOSED')} disabled={loading} style={{ ...smallBtnStyle, background: '#52c41a' }}>Approve</button>
+                          <button onClick={() => onChangeStatus(task.id, 'PENDING_RECTIFICATION')} disabled={loading} style={{ ...smallBtnStyle, background: '#ff4d4f' }}>Reject</button>
                         </>
                       )}
-                      {/* 任何角色都可查看整改记录 */}
+                      {/* any role can view rectification records */}
                       {task._count.rectificationSubmissions > 0 && (
-                        <button onClick={() => onOpenRectification(task.id)} style={{ ...smallBtnStyle, background: '#722ed1' }}>整改记录({task._count.rectificationSubmissions})</button>
+                        <button onClick={() => onOpenRectification(task.id)} style={{ ...smallBtnStyle, background: '#722ed1' }}>Rectifications ({task._count.rectificationSubmissions})</button>
                       )}
                     </div>
                   </td>
@@ -728,7 +728,7 @@ function TasksTab({ tasks, user, loading, filterStatus, filterOverdue, onFilterS
   )
 }
 
-// ─── 审计日志 Tab ──────────────────────────────────────────────────────────────
+// ─── Audit Logs Tab ────────────────────────────────────────────────────────────
 
 function AuditTab({ logs, total, page, loading, onPageChange, onRefresh }: {
   logs: AuditLog[]; total: number; page: number; loading: boolean
@@ -738,22 +738,22 @@ function AuditTab({ logs, total, page, loading, onPageChange, onRefresh }: {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>审计日志（共 {total} 条）</h2>
-        <button onClick={onRefresh} disabled={loading} style={outlineBtnStyle}>刷新</button>
+        <h2 style={{ margin: 0 }}>Audit Logs ({total} total)</h2>
+        <button onClick={onRefresh} disabled={loading} style={outlineBtnStyle}>Refresh</button>
       </div>
       <div style={cardStyle}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['ID', '实体类型', '实体ID', '操作', '操作人', '时间'].map((h) => (
+                {['ID', 'Entity Type', 'Entity ID', 'Action', 'Operator', 'Time'].map((h) => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {logs.length === 0 && !loading && (
-                <tr><td colSpan={6} style={{ ...tdStyle, textAlign: 'center', color: '#8c8c8c', padding: 32 }}>暂无日志</td></tr>
+                <tr><td colSpan={6} style={{ ...tdStyle, textAlign: 'center', color: '#8c8c8c', padding: 32 }}>No logs found</td></tr>
               )}
               {logs.map((log) => (
                 <tr key={log.id}>
@@ -773,9 +773,9 @@ function AuditTab({ logs, total, page, loading, onPageChange, onRefresh }: {
         </div>
         {totalPages > 1 && (
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16 }}>
-            <button onClick={() => onPageChange(page - 1)} disabled={page <= 1 || loading} style={outlineBtnStyle}>上一页</button>
-            <span style={{ lineHeight: '32px', fontSize: 14, color: '#595959' }}>第 {page} / {totalPages} 页</span>
-            <button onClick={() => onPageChange(page + 1)} disabled={page >= totalPages || loading} style={outlineBtnStyle}>下一页</button>
+            <button onClick={() => onPageChange(page - 1)} disabled={page <= 1 || loading} style={outlineBtnStyle}>Previous</button>
+            <span style={{ lineHeight: '32px', fontSize: 14, color: '#595959' }}>Page {page} / {totalPages}</span>
+            <button onClick={() => onPageChange(page + 1)} disabled={page >= totalPages || loading} style={outlineBtnStyle}>Next</button>
           </div>
         )}
       </div>
@@ -783,7 +783,7 @@ function AuditTab({ logs, total, page, loading, onPageChange, onRefresh }: {
   )
 }
 
-// ─── 创建任务弹窗 ──────────────────────────────────────────────────────────────
+// ─── Create Task Modal ─────────────────────────────────────────────────────────
 
 function CreateTaskModal({ token, onClose, onCreated }: {
   token: string; onClose: () => void; onCreated: () => void
@@ -818,12 +818,12 @@ function CreateTaskModal({ token, onClose, onCreated }: {
   async function submit() {
     setErr('')
     if (!form.storeId || !form.title || !form.assigneeId || !form.dueDate) {
-      setErr('请填写所有必填字段')
+      setErr('Please fill in all required fields')
       return
     }
     const validItems = items.filter((i) => i.itemName.trim())
     if (validItems.length === 0) {
-      setErr('至少填写一个检查项')
+      setErr('At least one inspection item is required')
       return
     }
     setSaving(true)
@@ -841,63 +841,63 @@ function CreateTaskModal({ token, onClose, onCreated }: {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(JSON.stringify(data?.error) || '创建失败')
+      if (!res.ok) throw new Error(JSON.stringify(data?.error) || 'Create failed')
       onCreated()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : '创建失败')
+      setErr(e instanceof Error ? e.message : 'Create failed')
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Modal title="创建巡检任务" onClose={onClose}>
+    <Modal title="Create Inspection Task" onClose={onClose}>
       {err && <div style={{ color: '#cf1322', background: '#fff1f0', border: '1px solid #ffa39e', padding: '8px 12px', borderRadius: 6, marginBottom: 14, fontSize: 14 }}>{err}</div>}
       <div style={{ display: 'grid', gap: 14 }}>
-        <FormField label="门店 ID *">
-          <input style={inputStyle} type="number" value={form.storeId} onChange={(e) => setField('storeId', e.target.value)} placeholder="门店ID（如：1）" />
+        <FormField label="Store ID *">
+          <input style={inputStyle} type="number" value={form.storeId} onChange={(e) => setField('storeId', e.target.value)} placeholder="Store ID (e.g. 1)" />
         </FormField>
-        <FormField label="任务标题 *">
-          <input style={inputStyle} value={form.title} onChange={(e) => setField('title', e.target.value)} placeholder="例：2024年1月例行巡检" />
+        <FormField label="Task Title *">
+          <input style={inputStyle} value={form.title} onChange={(e) => setField('title', e.target.value)} placeholder="e.g. January 2024 Routine Inspection" />
         </FormField>
-        <FormField label="任务描述">
-          <textarea style={{ ...inputStyle, height: 68, resize: 'vertical' }} value={form.description} onChange={(e) => setField('description', e.target.value)} placeholder="选填" />
+        <FormField label="Task Description">
+          <textarea style={{ ...inputStyle, height: 68, resize: 'vertical' }} value={form.description} onChange={(e) => setField('description', e.target.value)} placeholder="Optional" />
         </FormField>
-        <FormField label="负责人 ID *">
-          <input style={inputStyle} type="number" value={form.assigneeId} onChange={(e) => setField('assigneeId', e.target.value)} placeholder="负责人用户ID（如：2）" />
+        <FormField label="Assignee ID *">
+          <input style={inputStyle} type="number" value={form.assigneeId} onChange={(e) => setField('assigneeId', e.target.value)} placeholder="Assignee user ID (e.g. 2)" />
         </FormField>
-        <FormField label="截止日期 *">
+        <FormField label="Due Date *">
           <input style={inputStyle} type="date" value={form.dueDate} onChange={(e) => setField('dueDate', e.target.value)} />
         </FormField>
 
         <div>
-          <div style={{ ...labelStyle, marginBottom: 8 }}>检查项（至少 1 项）</div>
+          <div style={{ ...labelStyle, marginBottom: 8 }}>Inspection Items (at least 1)</div>
           {items.map((item, idx) => (
             <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <input
                 style={{ ...inputStyle, flex: 1 }}
                 value={item.itemName}
                 onChange={(e) => setItem(idx, e.target.value)}
-                placeholder={`检查项 ${idx + 1}`}
+                placeholder={`Item ${idx + 1}`}
               />
               {items.length > 1 && (
                 <button onClick={() => removeItem(idx)} style={{ ...outlineBtnStyle, color: '#ff4d4f', borderColor: '#ff4d4f', padding: '4px 10px' }}>✕</button>
               )}
             </div>
           ))}
-          <button onClick={addItem} style={outlineBtnStyle}>+ 添加检查项</button>
+          <button onClick={addItem} style={outlineBtnStyle}>+ Add Item</button>
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
-        <button onClick={onClose} style={outlineBtnStyle}>取消</button>
-        <button onClick={submit} disabled={saving} style={primaryBtnStyle}>{saving ? '创建中...' : '创建任务'}</button>
+        <button onClick={onClose} style={outlineBtnStyle}>Cancel</button>
+        <button onClick={submit} disabled={saving} style={primaryBtnStyle}>{saving ? 'Creating...' : 'Create Task'}</button>
       </div>
     </Modal>
   )
 }
 
-// ─── 整改弹窗 ─────────────────────────────────────────────────────────────────
+// ─── Rectification Modal ──────────────────────────────────────────────────────
 
 function RectificationModal({ taskId, user, submissions, note, file, uploading, onFetch, onNoteChange, onFileChange, onClose, onSubmit, onPreview }: {
   taskId: number; user: User
@@ -912,17 +912,17 @@ function RectificationModal({ taskId, user, submissions, note, file, uploading, 
 }) {
   const canSubmit = user.role === 'store_manager'
   return (
-    <Modal title={`任务 #${taskId} 整改记录`} onClose={onClose} width={560}>
-      {/* 历史整改记录 */}
+    <Modal title={`Task #${taskId} Rectification Records`} onClose={onClose} width={560}>
+      {/* historical rectification records */}
       {submissions.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ ...labelStyle, marginBottom: 8 }}>历史整改（{submissions.length} 次）</div>
+          <div style={{ ...labelStyle, marginBottom: 8 }}>History ({submissions.length} submissions)</div>
           {submissions.map((sub) => (
             <div key={sub.id} style={{ background: '#f5f6fa', borderRadius: 6, padding: '10px 14px', marginBottom: 8 }}>
               <div style={{ fontSize: 13, color: '#595959', marginBottom: 4 }}>
                 {sub.submitter.email} · {fmtDatetime(sub.submittedAt)}
               </div>
-              <div style={{ fontSize: 14 }}>{sub.note || '（无备注）'}</div>
+              <div style={{ fontSize: 14 }}>{sub.note || '(no note)'}</div>
               {sub.attachments.length > 0 && (
                 <div style={{ fontSize: 13, marginTop: 6, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {sub.attachments.map((att) => {
@@ -934,11 +934,11 @@ function RectificationModal({ taskId, user, submissions, note, file, uploading, 
                           if (isImage) {
                             try {
                               const res = await onFetch(`/api/files/${att.id}/presign-download`)
-                              if (!res.ok) throw new Error('获取预览链接失败')
+                              if (!res.ok) throw new Error('Failed to get preview URL')
                               const { downloadUrl } = await res.json()
                               onPreview(downloadUrl)
                             } catch (e) {
-                              alert(e instanceof Error ? e.message : '预览失败')
+                              alert(e instanceof Error ? e.message : 'Preview failed')
                             }
                           } else {
                             window.open(`/api/files/${att.id}/presign-download`, '_blank')
@@ -965,32 +965,32 @@ function RectificationModal({ taskId, user, submissions, note, file, uploading, 
         </div>
       )}
 
-      {/* 提交新整改（仅 store_manager） */}
+      {/* submit new rectification (store_manager only) */}
       {canSubmit && (
         <div>
-          <div style={{ ...labelStyle, marginBottom: 8 }}>提交新整改</div>
+          <div style={{ ...labelStyle, marginBottom: 8 }}>Submit New Rectification</div>
           <div style={{ display: 'grid', gap: 12 }}>
-            <FormField label="整改说明">
+            <FormField label="Rectification Note">
               <textarea
                 style={{ ...inputStyle, height: 80, resize: 'vertical' }}
                 value={note}
                 onChange={(e) => onNoteChange(e.target.value)}
               />
             </FormField>
-            <FormField label="上传附件（可选，最大 10MB）">
+            <FormField label="Attachment (optional, max 10MB)">
               <input
                 type="file"
                 accept="image/*,application/pdf"
                 onChange={(e) => onFileChange(e.target.files?.[0] || null)}
                 style={{ fontSize: 14 }}
               />
-              {file && <div style={{ fontSize: 13, color: '#52c41a', marginTop: 4 }}>已选：{file.name}（{(file.size / 1024).toFixed(1)} KB）</div>}
+              {file && <div style={{ fontSize: 13, color: '#52c41a', marginTop: 4 }}>Selected: {file.name} ({(file.size / 1024).toFixed(1)} KB)</div>}
             </FormField>
           </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-            <button onClick={onClose} style={outlineBtnStyle}>关闭</button>
+            <button onClick={onClose} style={outlineBtnStyle}>Close</button>
             <button onClick={onSubmit} disabled={uploading} style={{ ...primaryBtnStyle, background: '#fa8c16' }}>
-              {uploading ? '提交中...' : '提交整改'}
+              {uploading ? 'Submitting...' : 'Submit Rectification'}
             </button>
           </div>
         </div>
@@ -998,14 +998,14 @@ function RectificationModal({ taskId, user, submissions, note, file, uploading, 
 
       {!canSubmit && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-          <button onClick={onClose} style={outlineBtnStyle}>关闭</button>
+          <button onClick={onClose} style={outlineBtnStyle}>Close</button>
         </div>
       )}
     </Modal>
   )
 }
 
-// ─── 通用组件 ─────────────────────────────────────────────────────────────────
+// ─── Common Components ────────────────────────────────────────────────────────
 
 function Modal({ title, onClose, children, width = 480 }: { title: string; onClose: () => void; children: React.ReactNode; width?: number }) {
   return (
@@ -1030,7 +1030,7 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
   )
 }
 
-// ─── 样式常量 ─────────────────────────────────────────────────────────────────
+// ─── Style Constants ──────────────────────────────────────────────────────────
 
 const cardStyle: React.CSSProperties = {
   background: '#fff',

@@ -10,7 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── 企业（多租户根节点）───────────────────────────────────────────────────────
+// ─── Company (multi-tenant root node) ─────────────────────────────────────────
 model Company {
   id        Int      @id @default(autoincrement())
   name      String  
@@ -25,7 +25,7 @@ model Company {
   @@map("companies")
 }
 
-// ─── 门店 ─────────────────────────────────────────────────────────────────────
+// ─── Store ────────────────────────────────────────────────────────────────────
 model Store {
   id        Int      @id @default(autoincrement())
   companyId Int      @map("company_id")
@@ -41,7 +41,7 @@ model Store {
   @@map("stores")
 }
 
-// ─── 用户 ─────────────────────────────────────────────────────────────────────
+// ─── User ─────────────────────────────────────────────────────────────────────
 enum UserRole {
   hq_admin
   inspector
@@ -85,7 +85,7 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
-// ─── 巡检任务 ─────────────────────────────────────────────────────────────────
+// ─── Inspection Task ──────────────────────────────────────────────────────────
 enum TaskStatus {
   PENDING_INSPECTION
   PENDING_RECTIFICATION
@@ -122,7 +122,7 @@ model InspectionTask {
   @@map("inspection_tasks")
 }
 
-// ─── 检查项 ───────────────────────────────────────────────────────────────────
+// ─── Inspection Item ──────────────────────────────────────────────────────────
 enum ItemResult {
   pass
   fail
@@ -143,7 +143,7 @@ model InspectionItem {
   @@map("inspection_items")
 }
 
-// ─── 整改提交 ─────────────────────────────────────────────────────────────────
+// ─── Rectification Submission ─────────────────────────────────────────────────
 model RectificationSubmission {
   id          Int      @id @default(autoincrement())
   taskId      Int      @map("task_id")
@@ -159,7 +159,7 @@ model RectificationSubmission {
   @@map("rectification_submissions")
 }
 
-// ─── 附件（S3 存储）──────────────────────────────────────────────────────────
+// ─── Attachment (S3 storage) ──────────────────────────────────────────────────
 model Attachment {
   id           Int      @id @default(autoincrement())
   companyId    Int      @map("company_id")
@@ -180,7 +180,7 @@ model Attachment {
   @@map("attachments")
 }
 
-// ─── 审计日志 ─────────────────────────────────────────────────────────────────
+// ─── Audit Log ────────────────────────────────────────────────────────────────
 model AuditLog {
   id         Int      @id @default(autoincrement())
   companyId  Int      @map("company_id")

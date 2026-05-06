@@ -4,7 +4,7 @@ import { requireAuth } from '@/middleware/auth'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
-// 状态机：合法的状态流转
+// state machine: valid status transitions
 const VALID_TRANSITIONS: Record<string, string[]> = {
   PENDING_INSPECTION: ['PENDING_RECTIFICATION'],
   PENDING_RECTIFICATION: ['PENDING_REVIEW'],
@@ -12,7 +12,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   CLOSED: [],
 }
 
-// 各状态允许操作的角色
+// roles allowed to perform each status transition
 const STATUS_ROLES: Record<string, string[]> = {
   PENDING_RECTIFICATION: ['hq_admin', 'inspector'],
   PENDING_REVIEW: ['store_manager'],
@@ -24,7 +24,7 @@ const statusSchema = z.object({
   comment: z.string().optional(),
 })
 
-// PATCH /api/tasks/:id/status - 状态流转
+// PATCH /api/tasks/:id/status - status transition
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -43,28 +43,28 @@ export async function PATCH(
   const { id } = await params
   const taskId = parseInt(id)
   if (isNaN(taskId)) {
-    return NextResponse.json({ error: '无效的任务 ID' }, { status: 400 })
+    return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 })
   }
 
   const task = await prisma.inspectionTask.findFirst({
     where: { id: taskId, companyId },
   })
-  if (!task) return NextResponse.json({ error: '任务不存在' }, { status: 404 })
+  if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 })
 
-  // 检查状态流转是否合法
+  // check if status transition is valid
   const allowedNext = VALID_TRANSITIONS[task.status] || []
   if (!allowedNext.includes(newStatus)) {
     return NextResponse.json(
-      { error: `不允许从 ${task.status} 流转到 ${newStatus}` },
+      { error: `Transition from ${task.status} to ${newStatus} is not allowed` },
       { status: 422 }
     )
   }
 
-  // 检查角色权限
+  // check role permission
   const allowedRoles = STATUS_ROLES[newStatus] || []
   if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
     return NextResponse.json(
-      { error: '当前角色无权执行此状态变更' },
+      { error: 'Your role is not permitted to perform this status change' },
       { status: 403 }
     )
   }

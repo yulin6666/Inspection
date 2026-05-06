@@ -4,32 +4,32 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('开始初始化测试数据...')
+  console.log('Initializing seed data...')
 
-  // 创建企业
+  // create company
   const company = await prisma.company.upsert({
     where: { id: 1 },
     update: {},
-    create: { name: '测试连锁企业' },
+    create: { name: 'Test Chain Company' },
   })
-  console.log('✓ 企业创建完成:', company.name)
+  console.log('✓ Company created:', company.name)
 
-  // 创建门店
+  // create stores
   const stores = await Promise.all([
     prisma.store.upsert({
       where: { id: 1 },
       update: {},
-      create: { companyId: company.id, name: '北京朝阳店', region: '华北区' },
+      create: { companyId: company.id, name: 'Beijing Chaoyang Store', region: 'North China' },
     }),
     prisma.store.upsert({
       where: { id: 2 },
       update: {},
-      create: { companyId: company.id, name: '上海浦东店', region: '华东区' },
+      create: { companyId: company.id, name: 'Shanghai Pudong Store', region: 'East China' },
     }),
   ])
-  console.log('✓ 门店创建完成:', stores.map(s => s.name).join(', '))
+  console.log('✓ Stores created:', stores.map(s => s.name).join(', '))
 
-  // 创建用户
+  // create users
   const passwordHash = await bcrypt.hash('password123', 10)
 
   const admin = await prisma.user.upsert({
@@ -39,7 +39,7 @@ async function main() {
       companyId: company.id,
       email: 'admin@test.com',
       passwordHash,
-      name: '总部管理员',
+      name: 'HQ Admin',
       role: 'hq_admin',
     },
   })
@@ -51,7 +51,7 @@ async function main() {
       companyId: company.id,
       email: 'inspector@test.com',
       passwordHash,
-      name: '巡检员',
+      name: 'Inspector',
       role: 'inspector',
     },
   })
@@ -64,42 +64,42 @@ async function main() {
       storeId: stores[0].id,
       email: 'manager@test.com',
       passwordHash,
-      name: '门店负责人',
+      name: 'Store Manager',
       role: 'store_manager',
     },
   })
 
-  console.log('✓ 用户创建完成:')
+  console.log('✓ Users created:')
   console.log('  - HQ Admin:', admin.email)
   console.log('  - Inspector:', inspector.email)
   console.log('  - Store Manager:', storeManager.email)
-  console.log('  - 密码统一: password123')
+  console.log('  - Password for all: password123')
 
-  // 创建一个示例巡检任务
+  // create a sample inspection task
   const task = await prisma.inspectionTask.create({
     data: {
       companyId: company.id,
       storeId: stores[0].id,
-      title: '2024年1月例行巡检',
-      description: '检查门店卫生、陈列规范、设备运行情况',
+      title: 'January 2024 Routine Inspection',
+      description: 'Check store hygiene, display standards, and equipment operation',
       assigneeId: inspector.id,
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7天后
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
       status: 'PENDING_INSPECTION',
       createdBy: admin.id,
       inspectionItems: {
         create: [
-          { itemName: '收银台卫生达标' },
-          { itemName: '商品陈列符合标准' },
-          { itemName: '冷链设备温度正常' },
-          { itemName: '员工着装规范' },
-          { itemName: '消防通道畅通' },
+          { itemName: 'Checkout counter hygiene meets standards' },
+          { itemName: 'Product display complies with guidelines' },
+          { itemName: 'Cold chain equipment temperature normal' },
+          { itemName: 'Staff dress code compliance' },
+          { itemName: 'Fire exit clear and accessible' },
         ],
       },
     },
   })
 
-  console.log('✓ 示例任务创建完成:', task.title)
-  console.log('\n初始化完成！')
+  console.log('✓ Sample task created:', task.title)
+  console.log('\nSeed complete!')
 }
 
 main()

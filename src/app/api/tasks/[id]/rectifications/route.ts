@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/middleware/auth'
 import { Prisma } from '@prisma/client'
 
-// POST /api/tasks/:id/rectifications - 提交整改
+// POST /api/tasks/:id/rectifications - submit rectification
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -11,9 +11,9 @@ export async function POST(
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
-  // 只有 store_manager 可以提交整改
+  // only store_manager can submit rectifications
   if (auth.role !== 'store_manager') {
-    return NextResponse.json({ error: '权限不足，仅门店负责人可提交整改' }, { status: 403 })
+    return NextResponse.json({ error: 'Permission denied: only store managers can submit rectifications' }, { status: 403 })
   }
 
   const { id } = await params
@@ -22,13 +22,13 @@ export async function POST(
     where: { id: taskId, companyId: auth.companyId },
   })
 
-  if (!task) return NextResponse.json({ error: '任务不存在' }, { status: 404 })
+  if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 })
   if (task.status !== 'PENDING_RECTIFICATION') {
-    return NextResponse.json({ error: `当前状态 ${task.status} 不允许提交整改` }, { status: 400 })
+    return NextResponse.json({ error: `Current status ${task.status} does not allow rectification submission` }, { status: 400 })
   }
 
   const body = await req.json()
-  const { note, s3Keys } = body // s3Keys: 已上传的文件 key 数组
+  const { note, s3Keys } = body // s3Keys: array of uploaded file keys
 
   const submission = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const sub = await tx.rectificationSubmission.create({
@@ -76,7 +76,7 @@ export async function POST(
   return NextResponse.json({ submission }, { status: 201 })
 }
 
-// GET /api/tasks/:id/rectifications - 查看整改记录
+// GET /api/tasks/:id/rectifications - view rectification records
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -89,7 +89,7 @@ export async function GET(
   const task = await prisma.inspectionTask.findFirst({
     where: { id: taskId, companyId: auth.companyId },
   })
-  if (!task) return NextResponse.json({ error: '任务不存在' }, { status: 404 })
+  if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 })
 
   const submissions = await prisma.rectificationSubmission.findMany({
     where: { taskId },

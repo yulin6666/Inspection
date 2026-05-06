@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken, JWTPayload } from '@/lib/jwt'
 
 /**
- * 从请求中提取并验证 JWT，返回 payload 或 401 Response
+ * Extract and verify JWT from request, returns payload or 401 Response
  */
 export async function requireAuth(req: NextRequest): Promise<JWTPayload | NextResponse> {
   const authHeader = req.headers.get('authorization')
@@ -26,7 +26,7 @@ export async function requireAuth(req: NextRequest): Promise<JWTPayload | NextRe
 }
 
 /**
- * 检查用户角色，不满足时返回 403 Response，满足时返回 null
+ * Check user role, returns 403 Response if not allowed, null if allowed
  */
 export function requireRoles(roles: string[]) {
   return (user: JWTPayload): NextResponse | null => {

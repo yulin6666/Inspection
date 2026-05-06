@@ -15,7 +15,7 @@ const createTaskSchema = z.object({
   })).min(1),
 })
 
-// GET /api/tasks - 任务列表
+// GET /api/tasks - task list
 export async function GET(req: NextRequest) {
   const authResult = await requireAuth(req)
   if (authResult instanceof NextResponse) return authResult
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
   const where: Record<string, unknown> = { companyId: user.companyId }
 
-  // 门店负责人只能看自己门店的任务
+  // store_manager can only see tasks for their own store
   if (user.role === 'store_manager' && user.storeId) {
     where.storeId = user.storeId
   } else if (storeId) {
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ tasks })
 }
 
-// POST /api/tasks - 创建任务（hq_admin / inspector）
+// POST /api/tasks - create task (hq_admin / inspector)
 export async function POST(req: NextRequest) {
   const authResult = await requireAuth(req)
   if (authResult instanceof NextResponse) return authResult
@@ -74,12 +74,12 @@ export async function POST(req: NextRequest) {
 
   const { storeId, title, description, assigneeId, dueDate, items } = parsed.data
 
-  // 验证门店属于同一公司
+  // verify store belongs to same company
   const store = await prisma.store.findFirst({
     where: { id: storeId, companyId: user.companyId },
   })
   if (!store) {
-    return NextResponse.json({ error: '门店不存在' }, { status: 404 })
+    return NextResponse.json({ error: 'Store not found' }, { status: 404 })
   }
 
   const task = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 写审计日志
+    // write audit log
     await tx.auditLog.create({
       data: {
         companyId: user.companyId,

@@ -10,7 +10,7 @@ export interface JWTPayload {
   storeId?: number
 }
 
-// access token：15 分钟有效
+// access token: valid for 15 minutes
 export function signToken(payload: JWTPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' })
 }
@@ -19,7 +19,7 @@ export function verifyToken(token: string): JWTPayload {
   return jwt.verify(token, JWT_SECRET) as JWTPayload
 }
 
-// refresh token：随机字符串，有效期 7 天
+// refresh token: random string, valid for 7 days
 export function generateRefreshToken(): string {
   return crypto.randomBytes(64).toString('hex')
 }

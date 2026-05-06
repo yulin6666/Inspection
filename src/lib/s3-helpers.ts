@@ -3,10 +3,10 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { s3Client, S3_BUCKET } from './s3'
 
 /**
- * 生成预签名上传 URL
- * @param key S3 对象 key
- * @param contentType 文件 MIME 类型
- * @param expiresIn 有效期（秒）
+ * Generate a presigned upload URL
+ * @param key S3 object key
+ * @param contentType file MIME type
+ * @param expiresIn expiry in seconds
  */
 export async function getPresignedUploadUrl(
   key: string,
@@ -23,9 +23,9 @@ export async function getPresignedUploadUrl(
 }
 
 /**
- * 生成预签名下载 URL
- * @param key S3 对象 key
- * @param expiresIn 有效期（秒）
+ * Generate a presigned download URL
+ * @param key S3 object key
+ * @param expiresIn expiry in seconds
  */
 export async function getPresignedDownloadUrl(
   key: string,

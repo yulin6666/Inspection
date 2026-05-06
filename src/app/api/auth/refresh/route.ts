@@ -2,26 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { signToken } from '@/lib/jwt'
 
-// POST /api/auth/refresh — 用 refresh token 换新 access token
+// POST /api/auth/refresh — exchange refresh token for new access token
 export async function POST(req: NextRequest) {
   try {
     const { refreshToken } = await req.json()
     if (!refreshToken) {
-      return NextResponse.json({ error: '缺少 refresh token' }, { status: 400 })
+      return NextResponse.json({ error: 'Missing refresh token' }, { status: 400 })
     }
 
-    // 查数据库
+    // query database
     const record = await prisma.refreshToken.findUnique({
       where: { token: refreshToken },
       include: { user: true },
     })
 
-    // 不存在或已过期
+    // not found or expired
     if (!record || record.expiresAt < new Date()) {
-      return NextResponse.json({ error: 'refresh token 无效或已过期' }, { status: 401 })
+      return NextResponse.json({ error: 'Refresh token is invalid or expired' }, { status: 401 })
     }
 
-    // 签发新 access token
+    // issue new access token
     const accessToken = signToken({
       userId: record.user.id,
       companyId: record.user.companyId,

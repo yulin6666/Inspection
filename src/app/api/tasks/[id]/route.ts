@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/middleware/auth'
 import { Prisma } from '@prisma/client'
 
-// GET /api/tasks/:id - 任务详情
+// GET /api/tasks/:id - task detail
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await requireAuth(req)
   if (authResult instanceof NextResponse) return authResult
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id } = await params
   const taskId = parseInt(id)
-  if (isNaN(taskId)) return NextResponse.json({ error: '无效的任务ID' }, { status: 400 })
+  if (isNaN(taskId)) return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 })
 
   const task = await prisma.inspectionTask.findFirst({
     where: { id: taskId, companyId },
@@ -30,30 +30,30 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     },
   })
 
-  if (!task) return NextResponse.json({ error: '任务不存在' }, { status: 404 })
+  if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 })
   return NextResponse.json(task)
 }
 
-// DELETE /api/tasks/:id - 删除任务（仅 hq_admin）
+// DELETE /api/tasks/:id - delete task (hq_admin only)
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await requireAuth(req)
   if (authResult instanceof NextResponse) return authResult
 
-  // 检查权限
+  // check permission
   if (authResult.role !== 'hq_admin') {
-    return NextResponse.json({ error: '权限不足' }, { status: 403 })
+    return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
   }
 
   const { userId, companyId } = authResult
 
   const { id } = await params
   const taskId = parseInt(id)
-  if (isNaN(taskId)) return NextResponse.json({ error: '无效的任务ID' }, { status: 400 })
+  if (isNaN(taskId)) return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 })
 
   const task = await prisma.inspectionTask.findFirst({
     where: { id: taskId, companyId },
   })
-  if (!task) return NextResponse.json({ error: '任务不存在' }, { status: 404 })
+  if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 })
 
   await prisma.$transaction([
     prisma.auditLog.create({
@@ -69,5 +69,5 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     prisma.inspectionTask.delete({ where: { id: taskId } }),
   ])
 
-  return NextResponse.json({ message: '删除成功' })
+  return NextResponse.json({ message: 'Deleted successfully' })
 }

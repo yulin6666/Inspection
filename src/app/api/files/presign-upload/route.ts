@@ -8,7 +8,7 @@ const schema = z.object({
   taskId: z.number(),
   fileName: z.string(),
   mimeType: z.string(),
-  size: z.number().max(10 * 1024 * 1024), // 最大 10MB
+  size: z.number().max(10 * 1024 * 1024), // max 10MB
 })
 
 export async function POST(req: NextRequest) {
@@ -19,23 +19,23 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { taskId, fileName, mimeType, size } = schema.parse(body)
 
-    // 验证任务存在且属于同一公司
+    // verify task exists and belongs to same company
     const task = await prisma.inspectionTask.findFirst({
       where: { id: taskId, companyId: auth.companyId },
     })
 
     if (!task) {
-      return NextResponse.json({ error: '任务不存在' }, { status: 404 })
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 })
     }
 
-    // 生成 S3 key
+    // generate S3 key
     const ext = fileName.split('.').pop()
     const s3Key = `company/${auth.companyId}/task/${taskId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
-    // 获取预签名上传 URL（5分钟有效）
+    // get presigned upload URL (valid for 5 minutes)
     const uploadUrl = await getPresignedUploadUrl(s3Key, mimeType, 300)
 
-    // 预先创建附件记录（上传完成后前端确认）
+    // pre-create attachment record (confirmed by frontend after upload)
     const attachment = await prisma.attachment.create({
       data: {
         companyId: auth.companyId,
@@ -53,6 +53,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.errors }, { status: 400 })
     }
     console.error('presign-upload error:', error)
-    return NextResponse.json({ error: '服务器错误' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

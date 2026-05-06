@@ -17,10 +17,10 @@ export async function GET(
   })
 
   if (!attachment) {
-    return NextResponse.json({ error: '文件不存在' }, { status: 404 })
+    return NextResponse.json({ error: 'File not found' }, { status: 404 })
   }
 
-  // 生成预签名下载 URL（5分钟有效）
+  // generate presigned download URL (valid for 5 minutes)
   const downloadUrl = await getPresignedDownloadUrl(attachment.s3Key, 300)
 
   return NextResponse.json({ downloadUrl, fileName: attachment.fileName })

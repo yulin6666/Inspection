@@ -6,9 +6,9 @@ export async function GET(request: NextRequest) {
   const auth = await requireAuth(request)
   if (auth instanceof NextResponse) return auth
 
-  // 只有 hq_admin 可以查看审计日志
+  // only hq_admin can view audit logs
   if (auth.role !== 'hq_admin') {
-    return NextResponse.json({ error: '无权访问' }, { status: 403 })
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 
   const { searchParams } = new URL(request.url)
