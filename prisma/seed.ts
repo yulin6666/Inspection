@@ -9,7 +9,7 @@ async function main() {
   // create company
   const company = await prisma.company.upsert({
     where: { id: 1 },
-    update: {},
+    update: { name: 'Test Chain Company' },
     create: { name: 'Test Chain Company' },
   })
   console.log('✓ Company created:', company.name)
@@ -18,12 +18,12 @@ async function main() {
   const stores = await Promise.all([
     prisma.store.upsert({
       where: { id: 1 },
-      update: {},
+      update: { name: 'Beijing Chaoyang Store', region: 'North China' },
       create: { companyId: company.id, name: 'Beijing Chaoyang Store', region: 'North China' },
     }),
     prisma.store.upsert({
       where: { id: 2 },
-      update: {},
+      update: { name: 'Shanghai Pudong Store', region: 'East China' },
       create: { companyId: company.id, name: 'Shanghai Pudong Store', region: 'East China' },
     }),
   ])
@@ -34,7 +34,7 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@test.com' },
-    update: {},
+    update: { name: 'HQ Admin' },
     create: {
       companyId: company.id,
       email: 'admin@test.com',
@@ -46,7 +46,7 @@ async function main() {
 
   const inspector = await prisma.user.upsert({
     where: { email: 'inspector@test.com' },
-    update: {},
+    update: { name: 'Inspector' },
     create: {
       companyId: company.id,
       email: 'inspector@test.com',
@@ -58,7 +58,7 @@ async function main() {
 
   const storeManager = await prisma.user.upsert({
     where: { email: 'manager@test.com' },
-    update: {},
+    update: { name: 'Store Manager' },
     create: {
       companyId: company.id,
       storeId: stores[0].id,
