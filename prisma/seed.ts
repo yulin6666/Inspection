@@ -75,30 +75,38 @@ async function main() {
   console.log('  - Store Manager:', storeManager.email)
   console.log('  - Password for all: password123')
 
-  // create a sample inspection task
-  const task = await prisma.inspectionTask.create({
-    data: {
-      companyId: company.id,
-      storeId: stores[0].id,
-      title: 'January 2024 Routine Inspection',
-      description: 'Check store hygiene, display standards, and equipment operation',
-      assigneeId: inspector.id,
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-      status: 'PENDING_INSPECTION',
-      createdBy: admin.id,
-      inspectionItems: {
-        create: [
-          { itemName: 'Checkout counter hygiene meets standards' },
-          { itemName: 'Product display complies with guidelines' },
-          { itemName: 'Cold chain equipment temperature normal' },
-          { itemName: 'Staff dress code compliance' },
-          { itemName: 'Fire exit clear and accessible' },
-        ],
-      },
-    },
+  // create a sample inspection task (only if none exist)
+  const existingTasks = await prisma.inspectionTask.count({
+    where: { companyId: company.id }
   })
 
-  console.log('✓ Sample task created:', task.title)
+  if (existingTasks === 0) {
+    const task = await prisma.inspectionTask.create({
+      data: {
+        companyId: company.id,
+        storeId: stores[0].id,
+        title: 'January 2024 Routine Inspection',
+        description: 'Check store hygiene, display standards, and equipment operation',
+        assigneeId: inspector.id,
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+        status: 'PENDING_INSPECTION',
+        createdBy: admin.id,
+        inspectionItems: {
+          create: [
+            { itemName: 'Checkout counter hygiene meets standards' },
+            { itemName: 'Product display complies with guidelines' },
+            { itemName: 'Cold chain equipment temperature normal' },
+            { itemName: 'Staff dress code compliance' },
+            { itemName: 'Fire exit clear and accessible' },
+          ],
+        },
+      },
+    })
+    console.log('✓ Sample task created:', task.title)
+  } else {
+    console.log('✓ Sample task already exists, skipping creation')
+  }
+
   console.log('\nSeed complete!')
 }
 
