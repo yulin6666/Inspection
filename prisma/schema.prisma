@@ -1,0 +1,187 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── 企业（多租户根节点）───────────────────────────────────────────────────────
+model Company {
+  id        Int      @id @default(autoincrement())
+  name      String  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  stores          Store[]
+  users           User[]
+  inspectionTasks InspectionTask[]
+  attachments     Attachment[]
+  auditLogs       AuditLog[]
+
+  @@map("companies")
+}
+
+// ─── 门店 ─────────────────────────────────────────────────────────────────────
+model Store {
+  id        Int      @id @default(autoincrement())
+  companyId Int      @map("company_id")
+  name      String  
+  region    String? 
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company         Company          @relation(fields: [companyId], references: [id])
+  users           User[]
+  inspectionTasks InspectionTask[]
+
+  @@index([companyId])
+  @@map("stores")
+}
+
+// ─── 用户 ─────────────────────────────────────────────────────────────────────
+enum UserRole {
+  hq_admin
+  inspector
+  store_manager
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  companyId    Int      @map("company_id")
+  storeId      Int?     @map("store_id")
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String  
+  role         UserRole
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  company                  Company                   @relation(fields: [companyId], references: [id])
+  store                    Store?                    @relation(fields: [storeId], references: [id])
+  createdTasks             InspectionTask[]          @relation("TaskCreator")
+  assignedTasks            InspectionTask[]          @relation("TaskAssignee")
+  rectificationSubmissions RectificationSubmission[]
+  auditLogs                AuditLog[]
+
+  @@index([companyId])
+  @@index([storeId])
+  @@map("users")
+}
+
+// ─── 巡检任务 ─────────────────────────────────────────────────────────────────
+enum TaskStatus {
+  PENDING_INSPECTION
+  PENDING_RECTIFICATION
+  PENDING_REVIEW
+  CLOSED
+}
+
+model InspectionTask {
+  id          Int        @id @default(autoincrement())
+  companyId   Int        @map("company_id")
+  storeId     Int        @map("store_id")
+  title       String    
+  description String?   
+  assigneeId  Int?       @map("assignee_id")
+  dueDate     DateTime   @map("due_date")
+  status      TaskStatus @default(PENDING_INSPECTION)
+  isOverdue   Boolean    @default(false) @map("is_overdue")
+  createdBy   Int        @map("created_by")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  company                  Company                   @relation(fields: [companyId], references: [id])
+  store                    Store                     @relation(fields: [storeId], references: [id])
+  creator                  User                      @relation("TaskCreator", fields: [createdBy], references: [id])
+  assignee                 User?                     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  inspectionItems          InspectionItem[]
+  rectificationSubmissions RectificationSubmission[]
+  attachments              Attachment[]
+
+  @@index([companyId])
+  @@index([storeId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("inspection_tasks")
+}
+
+// ─── 检查项 ───────────────────────────────────────────────────────────────────
+enum ItemResult {
+  pass
+  fail
+  na
+}
+
+model InspectionItem {
+  id        Int         @id @default(autoincrement())
+  taskId    Int         @map("task_id")
+  itemName  String      @map("item_name")
+  result    ItemResult?
+  issueDesc String?     @map("issue_desc")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  task InspectionTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("inspection_items")
+}
+
+// ─── 整改提交 ─────────────────────────────────────────────────────────────────
+model RectificationSubmission {
+  id          Int      @id @default(autoincrement())
+  taskId      Int      @map("task_id")
+  submitterId Int      @map("submitter_id")
+  note        String? 
+  submittedAt DateTime @default(now()) @map("submitted_at")
+
+  task        InspectionTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  submitter   User           @relation(fields: [submitterId], references: [id])
+  attachments Attachment[]
+
+  @@index([taskId])
+  @@map("rectification_submissions")
+}
+
+// ─── 附件（S3 存储）──────────────────────────────────────────────────────────
+model Attachment {
+  id           Int      @id @default(autoincrement())
+  companyId    Int      @map("company_id")
+  taskId       Int      @map("task_id")
+  submissionId Int?     @map("submission_id")
+  s3Key        String   @map("s3_key")
+  fileName     String   @map("file_name")
+  mimeType     String   @map("mime_type")
+  size         Int
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  company    Company                  @relation(fields: [companyId], references: [id])
+  task       InspectionTask           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  submission RectificationSubmission? @relation(fields: [submissionId], references: [id])
+
+  @@index([companyId])
+  @@index([taskId])
+  @@map("attachments")
+}
+
+// ─── 审计日志 ─────────────────────────────────────────────────────────────────
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  companyId  Int      @map("company_id")
+  entityType String   @map("entity_type")
+  entityId   Int      @map("entity_id")
+  action     String  
+  beforeJson Json?    @map("before_json")
+  afterJson  Json?    @map("after_json")
+  operatorId Int      @map("operator_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  company  Company @relation(fields: [companyId], references: [id])
+  operator User    @relation(fields: [operatorId], references: [id])
+
+  @@index([companyId])
+  @@index([entityType, entityId])
+  @@index([operatorId])
+  @@map("audit_logs")
+}

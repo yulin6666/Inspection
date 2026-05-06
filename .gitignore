@@ -1,0 +1,27 @@
+# 依赖
+node_modules/
+
+# Next.js 构建产物
+.next/
+out/
+
+# 环境变量（含数据库密码、AWS密钥等敏感信息，绝对不能提交）
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# TypeScript 构建缓存
+tsconfig.tsbuildinfo
+
+# macOS 系统文件
+.DS_Store
+
+# 日志
+*.log
+npm-debug.log*
+
+# 编辑器
+.vscode/
+.idea/
