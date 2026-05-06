@@ -819,6 +819,38 @@ function CreateTaskModal({ token, onClose, onCreated }: {
   const [items, setItems] = useState([{ itemName: '' }])
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+  const [stores, setStores] = useState<{ id: number; name: string; region: string | null }[]>([])
+  const [users, setUsers] = useState<{ id: number; name: string; email: string; role: string }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Load stores and users on mount
+  useEffect(() => {
+    async function loadOptions() {
+      try {
+        const [storesRes, usersRes] = await Promise.all([
+          fetch('/api/stores', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/users', { headers: { Authorization: `Bearer ${token}` } })
+        ])
+        if (storesRes.ok) {
+          const storesData = await storesRes.json()
+          setStores(storesData.stores || storesData || [])
+        }
+        if (usersRes.ok) {
+          const usersData = await usersRes.json()
+          // Filter to only show inspectors and admins as assignees
+          const assignableUsers = (usersData.users || usersData || []).filter(
+            (u: User) => u.role === 'inspector' || u.role === 'hq_admin'
+          )
+          setUsers(assignableUsers)
+        }
+      } catch (e) {
+        console.error('Failed to load options:', e)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadOptions()
+  }, [token])
 
   function setField(k: string, v: string) {
     setForm((f) => ({ ...f, [k]: v }))
@@ -874,41 +906,67 @@ function CreateTaskModal({ token, onClose, onCreated }: {
   return (
     <Modal title="Create Inspection Task" onClose={onClose}>
       {err && <div style={{ color: '#cf1322', background: '#fff1f0', border: '1px solid #ffa39e', padding: '8px 12px', borderRadius: 6, marginBottom: 14, fontSize: 14 }}>{err}</div>}
-      <div style={{ display: 'grid', gap: 14 }}>
-        <FormField label="Store ID *">
-          <input style={inputStyle} type="number" value={form.storeId} onChange={(e) => setField('storeId', e.target.value)} placeholder="Store ID (e.g. 1)" />
-        </FormField>
-        <FormField label="Task Title *">
-          <input style={inputStyle} value={form.title} onChange={(e) => setField('title', e.target.value)} placeholder="e.g. January 2024 Routine Inspection" />
-        </FormField>
-        <FormField label="Task Description">
-          <textarea style={{ ...inputStyle, height: 68, resize: 'vertical' }} value={form.description} onChange={(e) => setField('description', e.target.value)} placeholder="Optional" />
-        </FormField>
-        <FormField label="Assignee ID *">
-          <input style={inputStyle} type="number" value={form.assigneeId} onChange={(e) => setField('assigneeId', e.target.value)} placeholder="Assignee user ID (e.g. 2)" />
-        </FormField>
-        <FormField label="Due Date *">
-          <input style={inputStyle} type="date" value={form.dueDate} onChange={(e) => setField('dueDate', e.target.value)} />
-        </FormField>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '20px 0', color: '#8c8c8c' }}>Loading options...</div>
+      ) : (
+        <div style={{ display: 'grid', gap: 14 }}>
+          <FormField label="Store *">
+            <select
+              style={selectStyle}
+              value={form.storeId}
+              onChange={(e) => setField('storeId', e.target.value)}
+            >
+              <option value="">Select a store</option>
+              {stores.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.name}{store.region ? ` (${store.region})` : ''}
+                </option>
+              ))}
+            </select>
+          </FormField>
+          <FormField label="Task Title *">
+            <input style={inputStyle} value={form.title} onChange={(e) => setField('title', e.target.value)} placeholder="e.g. January 2024 Routine Inspection" />
+          </FormField>
+          <FormField label="Task Description">
+            <textarea style={{ ...inputStyle, height: 68, resize: 'vertical' }} value={form.description} onChange={(e) => setField('description', e.target.value)} placeholder="Optional" />
+          </FormField>
+          <FormField label="Assignee *">
+            <select
+              style={selectStyle}
+              value={form.assigneeId}
+              onChange={(e) => setField('assigneeId', e.target.value)}
+            >
+              <option value="">Select an assignee</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} ({user.email})
+                </option>
+              ))}
+            </select>
+          </FormField>
+          <FormField label="Due Date *">
+            <input style={inputStyle} type="date" value={form.dueDate} onChange={(e) => setField('dueDate', e.target.value)} />
+          </FormField>
 
-        <div>
-          <div style={{ ...labelStyle, marginBottom: 8 }}>Inspection Items (at least 1)</div>
-          {items.map((item, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <input
-                style={{ ...inputStyle, flex: 1 }}
-                value={item.itemName}
-                onChange={(e) => setItem(idx, e.target.value)}
-                placeholder={`Item ${idx + 1}`}
-              />
-              {items.length > 1 && (
-                <button onClick={() => removeItem(idx)} style={{ ...outlineBtnStyle, color: '#ff4d4f', borderColor: '#ff4d4f', padding: '4px 10px' }}>✕</button>
-              )}
-            </div>
-          ))}
-          <button onClick={addItem} style={outlineBtnStyle}>+ Add Item</button>
+          <div>
+            <div style={{ ...labelStyle, marginBottom: 8 }}>Inspection Items (at least 1)</div>
+            {items.map((item, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <input
+                  style={{ ...inputStyle, flex: 1 }}
+                  value={item.itemName}
+                  onChange={(e) => setItem(idx, e.target.value)}
+                  placeholder={`Item ${idx + 1}`}
+                />
+                {items.length > 1 && (
+                  <button onClick={() => removeItem(idx)} style={{ ...outlineBtnStyle, color: '#ff4d4f', borderColor: '#ff4d4f', padding: '4px 10px' }}>✕</button>
+                )}
+              </div>
+            ))}
+            <button onClick={addItem} style={outlineBtnStyle}>+ Add Item</button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
         <button onClick={onClose} style={outlineBtnStyle}>Cancel</button>
@@ -1143,6 +1201,6 @@ const labelStyle: React.CSSProperties = {
 
 const selectStyle: React.CSSProperties = {
   ...inputStyle,
-  width: 'auto',
-  padding: '5px 10px',
+  width: '100%',
+  padding: '7px 10px',
 }
