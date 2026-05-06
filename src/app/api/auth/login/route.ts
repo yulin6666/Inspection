@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
-import { signToken } from '@/lib/jwt'
+import { signToken, generateRefreshToken, refreshTokenExpiresAt } from '@/lib/jwt'
 import { z } from 'zod'
 
 const loginSchema = z.object({
@@ -20,32 +20,36 @@ export async function POST(req: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
     // 验证密码
     const isValid = await bcrypt.compare(data.password, user.passwordHash)
-
     if (!isValid) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    // 生成 JWT
-    const token = signToken({
+    // 生成 access token（15分钟）
+    const accessToken = signToken({
       userId: user.id,
       companyId: user.companyId,
       role: user.role,
       storeId: user.storeId || undefined,
     })
 
+    // 生成 refresh token（7天），存入数据库
+    const refreshToken = generateRefreshToken()
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt: refreshTokenExpiresAt(),
+      },
+    })
+
     return NextResponse.json({
-      token,
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -57,16 +61,9 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid input', details: error.errors },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 })
     }
-
     console.error('Login error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

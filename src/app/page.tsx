@@ -97,6 +97,7 @@ function fmtDatetime(date: string) {
 
 export default function Home() {
   const [token, setToken] = useState('')
+  const [refreshToken, setRefreshToken] = useState('')
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -145,7 +146,8 @@ export default function Home() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || '登录失败')
-      setToken(data.token)
+      setToken(data.accessToken)
+      setRefreshToken(data.refreshToken)
       setUser(data.user)
     } catch (e) {
       setError(e instanceof Error ? e.message : '登录失败')
@@ -154,8 +156,17 @@ export default function Home() {
     }
   }
 
-  function logout() {
+  async function logout() {
+    // 通知服务端删除 refresh token
+    if (refreshToken) {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      }).catch(() => {})
+    }
     setToken('')
+    setRefreshToken('')
     setUser(null)
     setTasks([])
     setMetrics(null)
@@ -164,18 +175,58 @@ export default function Home() {
     setTab('dashboard')
   }
 
+  // access token 过期时，用 refresh token 自动换新 token
+  async function refreshAccessToken(): Promise<string | null> {
+    if (!refreshToken) return null
+    try {
+      const res = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      })
+      if (!res.ok) {
+        // refresh token 也失效了，强制登出
+        logout()
+        return null
+      }
+      const data = await res.json()
+      setToken(data.accessToken)
+      return data.accessToken
+    } catch {
+      return null
+    }
+  }
+
+  // 带自动续签的 fetch 封装
+  async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+    let currentToken = token
+    const makeReq = (t: string) => fetch(url, {
+      ...options,
+      headers: { ...options.headers, Authorization: `Bearer ${t}` },
+    })
+
+    let res = await makeReq(currentToken)
+
+    // access token 过期时自动换新 token 重试一次
+    if (res.status === 401) {
+      const newToken = await refreshAccessToken()
+      if (newToken) {
+        res = await makeReq(newToken)
+      }
+    }
+    return res
+  }
+
   // ─── 数据加载 ─────────────────────────────────────────────────────────────────
 
-  const loadTasks = useCallback(async (authToken = token) => {
+  const loadTasks = useCallback(async () => {
     setError('')
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (filterStatus) params.set('status', filterStatus)
       if (filterOverdue) params.set('overdue', 'true')
-      const res = await fetch(`/api/tasks?${params}`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      })
+      const res = await authFetch(`/api/tasks?${params}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || '加载任务失败')
       setTasks(data.tasks || [])
@@ -184,27 +235,23 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
-  }, [token, filterStatus, filterOverdue])
+  }, [token, refreshToken, filterStatus, filterOverdue])
 
-  const loadMetrics = useCallback(async (authToken = token) => {
+  const loadMetrics = useCallback(async () => {
     try {
-      const res = await fetch('/api/dashboard/metrics', {
-        headers: { Authorization: `Bearer ${authToken}` },
-      })
+      const res = await authFetch('/api/dashboard/metrics')
       const data = await res.json()
       if (res.ok) setMetrics(data.summary)
     } catch {
       // 静默失败
     }
-  }, [token])
+  }, [token, refreshToken])
 
-  const loadAuditLogs = useCallback(async (page = 1, authToken = token) => {
+  const loadAuditLogs = useCallback(async (page = 1) => {
     setError('')
     setLoading(true)
     try {
-      const res = await fetch(`/api/audit-logs?page=${page}&pageSize=15`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      })
+      const res = await authFetch(`/api/audit-logs?page=${page}&pageSize=15`)
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || '加载审计日志失败')
       setAuditLogs(data.data || [])
@@ -215,7 +262,7 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
-  }, [token])
+  }, [token, refreshToken])
 
   // 登录后自动加载
   useEffect(() => {
@@ -239,9 +286,9 @@ export default function Home() {
     setError('')
     setLoading(true)
     try {
-      const res = await fetch(`/api/tasks/${taskId}/status`, {
+      const res = await authFetch(`/api/tasks/${taskId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       })
       const data = await res.json()
@@ -264,9 +311,7 @@ export default function Home() {
     setSubmissions([])
     // 加载已有整改记录
     try {
-      const res = await fetch(`/api/tasks/${taskId}/rectifications`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await authFetch(`/api/tasks/${taskId}/rectifications`)
       const data = await res.json()
       if (res.ok) setSubmissions(data.submissions || [])
     } catch {
@@ -283,9 +328,9 @@ export default function Home() {
 
       // 如果有文件，先上传到 S3
       if (rectFile) {
-        const presignRes = await fetch('/api/files/presign-upload', {
+        const presignRes = await authFetch('/api/files/presign-upload', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             taskId: rectTaskId,
             fileName: rectFile.name,
@@ -310,9 +355,9 @@ export default function Home() {
       }
 
       // 提交整改
-      const res = await fetch(`/api/tasks/${rectTaskId}/rectifications`, {
+      const res = await authFetch(`/api/tasks/${rectTaskId}/rectifications`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ note: rectNote, s3Keys }),
       })
       const data = await res.json()
@@ -427,7 +472,7 @@ export default function Home() {
           note={rectNote}
           file={rectFile}
           uploading={uploading}
-          token={token}
+          onFetch={authFetch}
           onNoteChange={setRectNote}
           onFileChange={setRectFile}
           onClose={() => setRectTaskId(null)}
@@ -854,11 +899,11 @@ function CreateTaskModal({ token, onClose, onCreated }: {
 
 // ─── 整改弹窗 ─────────────────────────────────────────────────────────────────
 
-function RectificationModal({ taskId, user, submissions, note, file, uploading, token, onNoteChange, onFileChange, onClose, onSubmit, onPreview }: {
+function RectificationModal({ taskId, user, submissions, note, file, uploading, onFetch, onNoteChange, onFileChange, onClose, onSubmit, onPreview }: {
   taskId: number; user: User
   submissions: RectificationSubmission[]
   note: string; file: File | null; uploading: boolean
-  token: string
+  onFetch: (url: string, options?: RequestInit) => Promise<Response>
   onNoteChange: (v: string) => void
   onFileChange: (f: File | null) => void
   onClose: () => void
@@ -888,9 +933,7 @@ function RectificationModal({ taskId, user, submissions, note, file, uploading, 
                         onClick={async () => {
                           if (isImage) {
                             try {
-                              const res = await fetch(`/api/files/${att.id}/presign-download`, {
-                                headers: { Authorization: `Bearer ${token}` },
-                              })
+                              const res = await onFetch(`/api/files/${att.id}/presign-download`)
                               if (!res.ok) throw new Error('获取预览链接失败')
                               const { downloadUrl } = await res.json()
                               onPreview(downloadUrl)

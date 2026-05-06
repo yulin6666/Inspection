@@ -6,7 +6,10 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git reset:*)",
-      "Bash(git update-ref:*)"
+      "Bash(git update-ref:*)",
+      "Bash(npm -v)",
+      "Bash(ls -la /Users/lindediannao/Documents/project/面试项目/Inspection/.env*)",
+      "Bash(grep -A 15 \"编辑 \\\\`.env\\\\`\")"
     ]
   }
 }
