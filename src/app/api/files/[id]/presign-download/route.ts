@@ -11,8 +11,9 @@ export async function GET(
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
+  const { id } = await params
   const attachment = await prisma.attachment.findFirst({
-    where: { id: parseInt(params.id), companyId: auth.companyId },
+    where: { id: parseInt(id), companyId: auth.companyId },
   })
 
   if (!attachment) {

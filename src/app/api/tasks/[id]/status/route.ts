@@ -40,7 +40,8 @@ export async function PATCH(
   }
 
   const { status: newStatus } = parsed.data
-  const taskId = parseInt(params.id)
+  const { id } = await params
+  const taskId = parseInt(id)
   if (isNaN(taskId)) {
     return NextResponse.json({ error: '无效的任务 ID' }, { status: 400 })
   }

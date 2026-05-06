@@ -9,7 +9,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (authResult instanceof NextResponse) return authResult
   const { companyId } = authResult
 
-  const taskId = parseInt(params.id)
+  const { id } = await params
+  const taskId = parseInt(id)
   if (isNaN(taskId)) return NextResponse.json({ error: '无效的任务ID' }, { status: 400 })
 
   const task = await prisma.inspectionTask.findFirst({
@@ -45,7 +46,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   const { userId, companyId } = authResult
 
-  const taskId = parseInt(params.id)
+  const { id } = await params
+  const taskId = parseInt(id)
   if (isNaN(taskId)) return NextResponse.json({ error: '无效的任务ID' }, { status: 400 })
 
   const task = await prisma.inspectionTask.findFirst({

@@ -84,7 +84,8 @@ export async function GET(
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
-  const taskId = parseInt(params.id)
+  const { id } = await params
+  const taskId = parseInt(id)
   const task = await prisma.inspectionTask.findFirst({
     where: { id: taskId, companyId: auth.companyId },
   })
