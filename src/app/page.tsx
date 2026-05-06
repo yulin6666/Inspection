@@ -534,10 +534,17 @@ function LoginPage({ onLogin, loading, error }: {
   const [email, setEmail] = useState('admin@test.com')
   const [password, setPassword] = useState('password123')
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f6fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#fff', borderRadius: 12, padding: 40, width: 380, boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
+    <div style={{ minHeight: '100vh', background: '#f5f6fa', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: '#fff', borderRadius: 12, padding: 40, width: '100%', maxWidth: 480, boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
         <h1 style={{ marginTop: 0, marginBottom: 4, fontSize: 22 }}>🔍 Store Inspection Platform</h1>
-        <p style={{ color: '#8c8c8c', marginBottom: 28, marginTop: 0 }}>Please log in to continue</p>
+        <p style={{ color: '#8c8c8c', marginBottom: 20, marginTop: 0 }}>Please log in to continue</p>
+
+        {/* Demo notice */}
+        <div style={{ background: '#e6f4ff', border: '1px solid #91caff', borderRadius: 6, padding: 12, marginBottom: 20, fontSize: 13, lineHeight: 1.6 }}>
+          <div style={{ fontWeight: 600, color: '#0958d9', marginBottom: 6 }}>📌 Demo Application</div>
+          <div style={{ color: '#003eb3' }}>This is a demonstration of a multi-tenant store inspection management system.</div>
+        </div>
+
         {error && (
           <div style={{ marginBottom: 16, color: '#cf1322', background: '#fff1f0', border: '1px solid #ffa39e', padding: '8px 12px', borderRadius: 6, fontSize: 14 }}>
             {error}
@@ -556,11 +563,25 @@ function LoginPage({ onLogin, loading, error }: {
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </div>
-        <div style={{ marginTop: 20, fontSize: 13, color: '#8c8c8c', lineHeight: 1.8 }}>
-          <div>Test accounts (password: password123):</div>
-          <div>admin@test.com — HQ Admin</div>
-          <div>inspector@test.com — Inspector</div>
-          <div>manager@test.com — Store Manager</div>
+
+        {/* Test accounts and role descriptions */}
+        <div style={{ marginTop: 24, fontSize: 13, color: '#595959', lineHeight: 1.7 }}>
+          <div style={{ fontWeight: 600, marginBottom: 10, color: '#262626' }}>Test Accounts (password: password123)</div>
+
+          <div style={{ marginBottom: 12, paddingLeft: 12, borderLeft: '3px solid #1677ff' }}>
+            <div style={{ fontWeight: 500, color: '#1677ff' }}>admin@test.com — HQ Admin</div>
+            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>• Create & manage tasks • View all data • Access audit logs • Approve/reject rectifications</div>
+          </div>
+
+          <div style={{ marginBottom: 12, paddingLeft: 12, borderLeft: '3px solid #52c41a' }}>
+            <div style={{ fontWeight: 500, color: '#52c41a' }}>inspector@test.com — Inspector</div>
+            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>• Create tasks • Submit inspection results • Approve/reject rectifications</div>
+          </div>
+
+          <div style={{ paddingLeft: 12, borderLeft: '3px solid #fa8c16' }}>
+            <div style={{ fontWeight: 500, color: '#fa8c16' }}>manager@test.com — Store Manager</div>
+            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 2 }}>• View own store tasks • Submit rectifications with attachments</div>
+          </div>
         </div>
       </div>
     </div>
